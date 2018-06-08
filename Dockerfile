@@ -4,7 +4,8 @@ FROM mhart/alpine-node:6
 
 # MAINTAINER Your Name Davin Ryan davin_ryan@bnz.co.nz
 
-ENV BUILDER_VERSION 1.0
+ENV BUILDER_VERSION 1.0 \
+    APP_ROOT=/opt/app-root 
 
 LABEL io.k8s.description="Platform for building Node.js Applications" \
       io.k8s.display-name="builder nodejs" \
@@ -24,28 +25,37 @@ COPY ./s2i/root/ /
 
 ENV \
     # The $HOME is not set by default, but some applications needs this variable
-    HOME=/opt/app-root/ \
-    PATH=/opt/app-root/src/bin:/opt/app-root/bin:$PATH
-
-# When bash is started non-interactively, to run a shell script, for example it
-# looks for this variable and source the content of this file. This will enable
-# the SCL for all scripts without need to do 'scl enable'.
-ENV BASH_ENV=/opt/app-root/etc/scl_enable \
+    # When bash is started non-interactively, to run a shell script, for example it
+    # looks for this variable and source the content of this file. This will enable
+    # the SCL for all scripts without need to do 'scl enable'.
+    HOME=/opt/app-root/src/ \
+    PATH=/opt/app-root/src/bin:/opt/app-root/bin:$PATH \
+    BASH_ENV=/opt/app-root/etc/scl_enable \
     ENV=/opt/app-root/etc/scl_enable \
     PROMPT_COMMAND=". /opt/app-root/etc/scl_enable"
 
+RUN mkdir -p /opt/app-root/src \
+    && mkdir -p /opt/app-root/etc/
+
+RUN addgroup -g 1001 node \
+    && adduser -u 1001 -G node -s /sbin/nologin -D node 
+
 # Drop the root user and make the content of /opt/app-root owned by user 1001
 #RUN useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin -c "Default Application User" default
-RUN mkdir -p /opt/app-root/
-RUN adduser -u 1001 -g 0 -D -h ${HOME} -s /sbin/nologin nodejs
-RUN chown -R 1001:0 /opt/app-root
+RUN apk update \
+    && apk add bash \
+           curl \
+           iputils \
+    && npm install -g http-server
+
+RUN chown -R 1001:0 /opt/app-root 
 #RUN chown -R 1001:1001 /opt/app-root
 
 # This default user is created in the alpine image
 USER 1001
 
 # Set the default port for applications built using this image
-EXPOSE 3000
+EXPOSE 8080
 
 # Directory with the sources is set as the working directory so all STI scripts
 # can execute relative to this path.

@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 #
 # The 'assemble' script builds your application source so that it is ready to run.
 #
@@ -20,6 +20,13 @@ fi
 
 echo "---> Installing application source..."
 cp -Rf /tmp/src/. ./
+echo "---> Building your Node application from source"
+if [ ! -z "$BUILD_SCRIPT" ]; then
+	echo "---> Build script: $BUILD_SCRIPT"
+	eval "$BUILD_SCRIPT"
+else
+    echo "---> Build ..."
+  npm install --production
+fi
+echo "---> Finished building"
 
-echo "---> Installing distributable dependencies..."
-npm install --production
